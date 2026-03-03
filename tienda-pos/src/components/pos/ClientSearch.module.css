@@ -1,0 +1,114 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.searchRow {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.inputWrap { flex: 1; }
+
+.searchBtn {
+  flex-shrink: 0;
+  margin-bottom: 0; /* align with input base */
+  align-self: flex-end;
+}
+
+/* Idle state */
+.idleState {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-bg);
+  border: 1.5px dashed var(--color-border-dark);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+}
+
+.idleIcon { font-size: 20px; opacity: 0.6; }
+
+.idleText {
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* Found card (compacta, cuando ya hay cliente) */
+.foundCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-surface-2);
+  border: 1.5px solid var(--color-success-border);
+  border-left: 4px solid var(--color-success);
+  border-radius: var(--radius-md);
+}
+
+.foundTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.foundInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.foundName {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.foundCedula {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--color-success-text);
+  font-weight: 500;
+}
+
+.changeBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-soft);
+  text-decoration: underline;
+  font-family: var(--font-body);
+  padding: 2px 4px;
+}
+.changeBtn:hover { color: var(--color-primary); }
+
+/* Not found card */
+.notFoundCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-error-bg);
+  border: 1.5px solid var(--color-error-border);
+  border-left: 4px solid var(--color-error);
+  border-radius: var(--radius-md);
+}
+
+.notFoundTop { display: flex; align-items: center; }
+
+.notFoundMsg {
+  font-size: 13px;
+  color: var(--color-error-text);
+  line-height: 1.5;
+}
+
+.notFoundActions {
+  display: flex;
+  gap: var(--space-2);
+}

@@ -1,0 +1,134 @@
+/* ============================================================
+   TIENDAGENÉRICA ADMIN — Design System
+   Inspired by: Donezo dashboard (clean, sidebar layout, emerald green)
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Brand greens — same identity as POS */
+  --c-primary:        #1a5c3a;
+  --c-primary-dark:   #0f3d26;
+  --c-primary-mid:    #2a7d52;
+  --c-primary-light:  #3aa76d;
+  --c-accent:         #22c55e;
+  --c-accent-soft:    #bbf7d0;
+
+  /* Surfaces */
+  --c-bg:             #f5f7f5;
+  --c-sidebar:        #ffffff;
+  --c-surface:        #ffffff;
+  --c-surface-2:      #f0f9f4;
+  --c-border:         #e4ede8;
+  --c-border-dark:    #c8ddd1;
+
+  /* Text */
+  --c-text:           #111917;
+  --c-text-mid:       #2d4a3e;
+  --c-text-soft:      #5a7a6a;
+  --c-text-muted:     #94b3a4;
+  --c-text-inv:       #ffffff;
+
+  /* Semantic */
+  --c-error:          #ef4444;
+  --c-error-bg:       #fef2f2;
+  --c-error-border:   #fecaca;
+  --c-error-text:     #991b1b;
+  --c-warning:        #f59e0b;
+  --c-warning-bg:     #fffbeb;
+  --c-success:        #10b981;
+  --c-success-bg:     #d1fae5;
+  --c-success-text:   #065f46;
+  --c-info:           #3b82f6;
+  --c-info-bg:        #eff6ff;
+
+  /* Status badges */
+  --c-badge-green-bg:    #dcfce7;
+  --c-badge-green-text:  #166534;
+  --c-badge-red-bg:      #fee2e2;
+  --c-badge-red-text:    #991b1b;
+  --c-badge-amber-bg:    #fef3c7;
+  --c-badge-amber-text:  #92400e;
+  --c-badge-blue-bg:     #dbeafe;
+  --c-badge-blue-text:   #1e40af;
+  --c-badge-gray-bg:     #f3f4f6;
+  --c-badge-gray-text:   #4b5563;
+
+  /* Layout */
+  --sidebar-w:        248px;
+  --topbar-h:         64px;
+
+  /* Typography */
+  --font-display:     'Sora', system-ui, sans-serif;
+  --font-body:        'DM Sans', system-ui, sans-serif;
+  --font-mono:        'DM Mono', monospace;
+
+  /* Spacing */
+  --s-1: 4px;  --s-2: 8px;   --s-3: 12px;  --s-4: 16px;
+  --s-5: 20px; --s-6: 24px;  --s-8: 32px;  --s-10: 40px;
+  --s-12: 48px; --s-16: 64px;
+
+  /* Radii */
+  --r-sm:   8px;
+  --r-md:   12px;
+  --r-lg:   16px;
+  --r-xl:   20px;
+  --r-2xl:  24px;
+  --r-full: 9999px;
+
+  /* Shadows */
+  --sh-xs:  0 1px 3px rgba(0,0,0,.05);
+  --sh-sm:  0 2px 8px rgba(0,0,0,.06);
+  --sh-md:  0 4px 16px rgba(0,0,0,.08);
+  --sh-lg:  0 8px 32px rgba(0,0,0,.10);
+  --sh-xl:  0 16px 48px rgba(0,0,0,.12);
+
+  /* Transitions */
+  --t-fast:   150ms ease;
+  --t-normal: 250ms ease;
+}
+
+html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--c-bg);
+  color: var(--c-text);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+h1,h2,h3,h4,h5 {
+  font-family: var(--font-display);
+  line-height: 1.2;
+  color: var(--c-text);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--c-border-dark); border-radius: 3px; }
+
+:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
+
+/* Animations */
+@keyframes fadeUp   { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+@keyframes fadeIn   { from { opacity:0; } to { opacity:1; } }
+@keyframes scaleIn  { from { opacity:0; transform:scale(.96); } to { opacity:1; transform:scale(1); } }
+@keyframes slideRight { from { opacity:0; transform:translateX(-8px); } to { opacity:1; transform:translateX(0); } }
+@keyframes spin     { to { transform:rotate(360deg); } }
+@keyframes shake    { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-5px)} 40%{transform:translateX(5px)} 60%{transform:translateX(-3px)} 80%{transform:translateX(3px)} }
+@keyframes countUp  { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+.anim-fadeUp   { animation: fadeUp   var(--t-normal) both; }
+.anim-fadeIn   { animation: fadeIn   var(--t-normal) both; }
+.anim-scaleIn  { animation: scaleIn  var(--t-normal) both; }
+.anim-slideRight { animation: slideRight var(--t-normal) both; }
+.anim-shake    { animation: shake 400ms ease; }
+
+.d1 { animation-delay: 60ms; }
+.d2 { animation-delay: 120ms; }
+.d3 { animation-delay: 180ms; }
+.d4 { animation-delay: 240ms; }
+.d5 { animation-delay: 300ms; }
+.d6 { animation-delay: 360ms; }

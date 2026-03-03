@@ -1,0 +1,225 @@
+.panel {
+  position: sticky;
+  top: calc(var(--navbar-h) + var(--space-6));
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-5);
+  background: linear-gradient(135deg, var(--color-surface-2), var(--color-surface));
+  border-bottom: 1px solid var(--color-border);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--color-primary);
+  margin: 0;
+}
+
+/* Consecutivo */
+.consecutivo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.consecutivoLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--color-text-muted);
+}
+
+.consecutivoNum {
+  font-family: var(--font-mono);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--color-primary);
+  letter-spacing: 2px;
+}
+
+/* Products list */
+.productsList {
+  padding: var(--space-4) var(--space-5);
+  min-height: 80px;
+  max-height: 160px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.emptyProducts {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  text-align: center;
+  font-style: italic;
+  padding: var(--space-4) 0;
+  margin: 0;
+}
+
+.productItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 6px 8px;
+  background: var(--color-surface-2);
+  border-radius: var(--radius-sm);
+  animation: fadeIn 0.2s ease;
+}
+
+.productItemLeft {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.productItemIcon { font-size: 13px; flex-shrink: 0; }
+
+.productItemName {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.productItemQty {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-primary-mid);
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+.productItemTotal {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Divider */
+.divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: 0;
+}
+
+/* Totals */
+.totals {
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.totalRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.totalLabel {
+  font-size: 13px;
+  color: var(--color-text-soft);
+}
+
+.totalValue {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.totalDivider {
+  height: 1.5px;
+  background: var(--color-border-dark);
+  margin: 4px 0;
+}
+
+.totalRowBig {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.totalLabelBig {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--color-primary);
+  text-transform: uppercase;
+}
+
+.totalValueBig {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+/* Cliente */
+.clienteBlock {
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.clienteLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--color-text-muted);
+}
+
+.clienteInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.clienteName {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.clienteCedula {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-success-text);
+}
+
+.clienteEmpty {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateX(8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}

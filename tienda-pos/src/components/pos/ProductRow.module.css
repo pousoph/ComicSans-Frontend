@@ -1,0 +1,175 @@
+.row {
+  transition: background-color var(--transition-fast);
+}
+
+.row:nth-child(even) {
+  background: #FAFFFE;
+}
+
+/* Status variants */
+.statusValid {
+  border-left: 3px solid var(--color-accent);
+}
+.statusComplete {
+  background: var(--color-surface-2) !important;
+  border-left: 3px solid var(--color-success);
+}
+.statusInvalid {
+  border-left: 3px solid var(--color-error);
+  background: #FFF8F8 !important;
+}
+.statusSearching {
+  border-left: 3px solid var(--color-warning);
+  background: var(--color-warning-bg) !important;
+}
+.disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* Cells */
+td {
+  padding: 10px 12px;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.cellNum { width: 44px; text-align: center; }
+.cellCodigo { width: 130px; }
+.cellNombre { min-width: 160px; }
+.cellCantidad { width: 80px; text-align: center; }
+.cellPrecio { width: 110px; text-align: right; }
+.cellTotal { width: 120px; text-align: right; }
+
+/* Number badge */
+.numBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-border);
+  color: var(--color-text-soft);
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font-body);
+}
+.numBadgeComplete {
+  background: var(--color-success);
+  color: #fff;
+}
+
+/* Codigo input */
+.codigoWrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.codigoInput {
+  width: 72px;
+  height: 34px;
+  padding: 0 8px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--color-text);
+  background: var(--color-surface);
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.codigoInput:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(34,197,94,0.15);
+}
+.codigoInput.inputError {
+  border-color: var(--color-error);
+  background: var(--color-error-bg);
+}
+.codigoInput:disabled {
+  background: var(--color-bg);
+  cursor: not-allowed;
+}
+
+.searchIconBtn {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface-2);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 13px;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+.searchIconBtn:hover:not(:disabled) {
+  background: var(--color-primary-mid);
+  border-color: var(--color-primary-mid);
+}
+.searchIconBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Quantity input */
+.cantidadInput {
+  width: 60px;
+  height: 34px;
+  padding: 0 8px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  text-align: center;
+  color: var(--color-text);
+  background: var(--color-surface);
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.cantidadInput:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(34,197,94,0.15);
+}
+.cantidadInput.cantidadComplete {
+  border-color: var(--color-success);
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+  font-weight: 700;
+}
+.cantidadInput:disabled {
+  background: var(--color-bg);
+  cursor: not-allowed;
+}
+
+/* Text helpers */
+.searchingText { font-size: 12px; color: var(--color-warning-text); font-style: italic; }
+.errorText     { font-size: 12px; color: var(--color-error); font-weight: 500; }
+.productName   { font-size: 13px; font-weight: 600; color: var(--color-text); }
+.placeholderText { font-size: 13px; color: var(--color-text-muted); }
+
+/* Mono values */
+.monoValue {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--color-text-soft);
+}
+.emptyValue { color: var(--color-text-muted); }
+.totalValue { font-weight: 700; }
+.totalActive { color: var(--color-primary); font-size: 14px; }
+
+/* Spinner mini */
+.miniSpinner {
+  display: block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(0,0,0,0.15);
+  border-top-color: var(--color-primary-mid);
+  border-radius: 50%;
+  animation: spin 600ms linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
