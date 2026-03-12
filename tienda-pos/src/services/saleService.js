@@ -1,19 +1,21 @@
 // ============================================================
 // saleService.js
-// Simula guardar venta + detalleVentas
-// API real: POST /ventas/agregar  + POST /detalleVentas/guardar
+// Guarda venta + detalle a través del API Gateway
+// API: POST /api/sales/save
 //
-// Campos tabla ventas (según el documento):
-//   codigoVenta (consecutivo), cedulaCliente, cedulaUsuario,
-//   totalVenta, totalIva, totalConIva
-//
-// Campos tabla detalleVentas:
-//   codigoProducto, cantidad, valorUnitario, valorTotal, codigoVenta
+// El gateway inyecta X-User-Id desde el JWT automáticamente
 // ============================================================
 
-import { MOCK_VENTAS, getNextConsecutivo } from './mockData.js'
-
-const delay = (ms = 1000) => new Promise(res => setTimeout(res, ms))
+/**
+ * Construye headers con Authorization Bearer
+ * @returns {object}
+ */
+function authHeaders() {
+  const token = localStorage.getItem('token')
+  const headers = { 'Content-Type': 'application/json' }
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  return headers
+}
 
 /**
  * Guarda la venta y su detalle
@@ -28,8 +30,6 @@ const delay = (ms = 1000) => new Promise(res => setTimeout(res, ms))
  * @returns {Promise<{ok: boolean, codigoVenta: string, message: string}>}
  */
 export async function guardarVenta(ventaData) {
-  await delay(1100)
-
   const { cliente, cajero, productos, subtotal, totalIva, totalConIva } = ventaData
 
   // Validación mínima
@@ -37,36 +37,45 @@ export async function guardarVenta(ventaData) {
     return { ok: false, codigoVenta: null, message: 'Datos de venta incompletos.' }
   }
 
-  const codigoVenta = getNextConsecutivo()
+  try {
+    const res = await fetch('/api/sales/save', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({
+        customer_id: cliente.cedula,
+        details: productos.map(item => ({
+          product_code: item.producto.codigo,
+          product_name: item.producto.nombre,
+          quantity:     item.cantidad,
+          unit_price:   item.producto.precioVenta,
+          vat_rate:     item.producto.ivaCompra,
+        })),
+      }),
+    })
 
-  // Registro en tabla ventas
-  const venta = {
-    codigoVenta,
-    cedulaCliente:  cliente.cedula,
-    cedulaUsuario:  cajero.cedula,
-    totalVenta:     subtotal,
-    totalIva,
-    totalConIva,
-    fecha:          new Date().toISOString(),
-  }
+    const body = await res.json()
 
-  // Registro en tabla detalleVentas
-  const detalle = productos.map(item => ({
-    codigoVenta,
-    codigoProducto: item.producto.codigo,
-    cantidad:       item.cantidad,
-    valorUnitario:  item.producto.precioVenta,
-    valorTotal:     item.totalProducto,
-  }))
+    if (!body.success) {
+      return {
+        ok: false,
+        codigoVenta: null,
+        message: body.error || 'No se pudo registrar la venta.',
+      }
+    }
 
-  // Guardar en mock DB
-  MOCK_VENTAS.push({ venta, detalle })
-
-  return {
-    ok: true,
-    codigoVenta,
-    venta,
-    detalle,
-    message: 'Venta registrada exitosamente.',
+    const sale = body.data
+    return {
+      ok: true,
+      codigoVenta: sale.sale_code,
+      venta: sale,
+      detalle: sale.details || [],
+      message: 'Venta registrada exitosamente.',
+    }
+  } catch (err) {
+    return {
+      ok: false,
+      codigoVenta: null,
+      message: 'Error de conexión con el servidor.',
+    }
   }
 }

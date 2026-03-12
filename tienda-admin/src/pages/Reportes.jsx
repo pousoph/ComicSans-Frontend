@@ -28,7 +28,32 @@ export default function Reportes() {
   }
   useEffect(()=>{ load(tab) },[tab])
 
-  const handleExport = () => setToast({message:'Exportación disponible al conectar con el backend.', type:'info'})
+  const handleExport = () => {
+    if (filtered.length === 0) {
+      setToast({ message: 'No hay datos para exportar.', type: 'info' })
+      return
+    }
+    const headers = Object.keys(filtered[0])
+    const csvRows = [
+      headers.join(','),
+      ...filtered.map(row =>
+        headers.map(h => {
+          const val = String(row[h] ?? '')
+          return val.includes(',') || val.includes('"') || val.includes('\n')
+            ? `"${val.replace(/"/g, '""')}"`
+            : val
+        }).join(',')
+      ),
+    ]
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `reporte_${tab}_${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    setToast({ message: 'Reporte exportado exitosamente.', type: 'success' })
+  }
 
   const rows = data[tab]?.data || []
   const filtered = rows.filter(r => Object.values(r).some(v=>String(v).toLowerCase().includes(search.toLowerCase())))

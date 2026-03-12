@@ -112,9 +112,6 @@ export default function Login() {
             ¿Problemas para ingresar?{' '}
             <span className={styles.helpLink}>Contacta al administrador</span>
           </p>
-          <div className={styles.demoHint}>
-            <strong>Demo:</strong> usuario <code>jperez</code> / contraseña <code>1234</code>
-          </div>
         </div>
       </div>
     </div>
