@@ -1,9 +1,8 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { AdminLayout } from '../components/layout/AdminLayout'
 import { Btn, Toast } from '../components/ui'
 import { Icon } from '../components/ui/Icons'
-import { cargarProductosCSV } from '../services/adminService'
-import { MOCK_PRODUCTOS } from '../services/mockData'
+import { cargarProductosCSV, getProductos } from '../services/adminService'
 import { fmtCurrency } from '../utils/formatters'
 import styles from './Productos.module.css'
 
@@ -11,10 +10,20 @@ export default function Productos() {
   const fileRef = useRef()
   const [file, setFile]       = useState(null)
   const [loading, setLoading] = useState(false)
+  const [loadingProducts, setLoadingProducts] = useState(true)
   const [result, setResult]   = useState(null)
   const [toast, setToast]     = useState(null)
-  const [productos, setProductos] = useState([...MOCK_PRODUCTOS])
+  const [productos, setProductos] = useState([])
   const [drag, setDrag]       = useState(false)
+
+  const loadProductos = async () => {
+    setLoadingProducts(true)
+    const res = await getProductos()
+    if (res.ok) setProductos(res.data)
+    setLoadingProducts(false)
+  }
+
+  useEffect(() => { loadProductos() }, [])
 
   const handleFile = e => {
     const f = e.target.files[0]
@@ -36,7 +45,7 @@ export default function Productos() {
     setLoading(false)
     setResult(r)
     if (r.ok) {
-      setProductos([...MOCK_PRODUCTOS])
+      await loadProductos()
       setToast({message:r.message,type:'success'})
       setFile(null)
       if (fileRef.current) fileRef.current.value = ''
@@ -159,23 +168,29 @@ export default function Productos() {
               <span className={styles.tableCount}>{productos.length} productos</span>
             </div>
             <div className={styles.tableWrap}>
-              <table className={styles.table}>
-                <thead>
-                  <tr><th>Cód.</th><th>Nombre</th><th>NIT Prov.</th><th>P. Compra</th><th>IVA</th><th>P. Venta</th></tr>
-                </thead>
-                <tbody>
-                  {productos.map(p=>(
-                    <tr key={p.codigo} className={styles.tableRow}>
-                      <td className={styles.tdCode}>{p.codigo}</td>
-                      <td className={styles.tdName}>{p.nombre}</td>
-                      <td className={styles.tdMono}>{p.nitProveedor}</td>
-                      <td className={styles.tdMono}>{fmtCurrency(p.precioCompra)}</td>
-                      <td><span className={styles.ivaBadge}>{p.ivaCompra}%</span></td>
-                      <td className={styles.tdPrice}>{fmtCurrency(p.precioVenta)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              {loadingProducts ? (
+                <div style={{padding:'2rem',textAlign:'center',color:'var(--c-text-muted)',fontSize:'14px'}}>
+                  Cargando productos...
+                </div>
+              ) : (
+                <table className={styles.table}>
+                  <thead>
+                    <tr><th>Cód.</th><th>Nombre</th><th>NIT Prov.</th><th>P. Compra</th><th>IVA</th><th>P. Venta</th></tr>
+                  </thead>
+                  <tbody>
+                    {productos.map(p=>(
+                      <tr key={p.codigo} className={styles.tableRow}>
+                        <td className={styles.tdCode}>{p.codigo}</td>
+                        <td className={styles.tdName}>{p.nombre}</td>
+                        <td className={styles.tdMono}>{p.nitProveedor}</td>
+                        <td className={styles.tdMono}>{fmtCurrency(p.precioCompra)}</td>
+                        <td><span className={styles.ivaBadge}>{p.ivaCompra}%</span></td>
+                        <td className={styles.tdPrice}>{fmtCurrency(p.precioVenta)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         </div>

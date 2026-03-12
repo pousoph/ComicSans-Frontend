@@ -99,9 +99,6 @@ export default function AdminLogin() {
             </Btn>
           </form>
 
-          <div className={styles.demo}>
-            <strong>Demo:</strong> usuario <code>admininicial</code> / contraseña <code>admin123456</code>
-          </div>
         </div>
       </div>
     </div>

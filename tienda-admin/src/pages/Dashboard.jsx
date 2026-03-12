@@ -4,9 +4,8 @@ import { useAuth } from '../context/AuthContext'
 import { AdminLayout } from '../components/layout/AdminLayout'
 import { StatCard } from '../components/ui'
 import { Icon } from '../components/ui/Icons'
-import { getDashboardStats } from '../services/adminService'
+import { getDashboardStats, getVentasRecientes } from '../services/adminService'
 import { fmtCurrency, fmtDate } from '../utils/formatters'
-import { MOCK_VENTAS, MOCK_CLIENTES } from '../services/mockData'
 import styles from './Dashboard.module.css'
 
 export default function Dashboard() {
@@ -14,17 +13,35 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [recentSales, setRecentSales] = useState([])
+  const [barData, setBarData] = useState([])
 
   useEffect(() => {
     getDashboardStats().then(r => { if(r.ok) setStats(r.data); setLoading(false) })
+    getVentasRecientes().then(r => {
+      if (r.ok) {
+        setRecentSales(r.data.slice(0, 5))
+        // Group sales by day of week for last 7 days
+        const dayLabels = ['D','L','M','M','J','V','S']
+        const now = new Date()
+        const days = Array.from({length:7}, (_,i) => {
+          const d = new Date(now)
+          d.setDate(d.getDate() - (6 - i))
+          return d
+        })
+        const grouped = days.map(d => {
+          const key = d.toISOString().split('T')[0]
+          const total = r.data
+            .filter(s => (s.fecha || '').split('T')[0] === key)
+            .reduce((acc, s) => acc + s.totalConIva, 0)
+          return { day: dayLabels[d.getDay()], val: total }
+        })
+        setBarData(grouped)
+      }
+    })
   }, [])
 
-  const recentSales = MOCK_VENTAS.slice(-5).reverse()
-  const barMax = 200000
-  const barData = [
-    { day:'L', val:77350 }, { day:'M', val:142800 }, { day:'M', val:51170 },
-    { day:'J', val:105910 }, { day:'V', val:180880 }, { day:'S', val:91630 }, { day:'D', val:0 },
-  ]
+  const barMax = Math.max(...barData.map(b => b.val), 1)
 
   return (
     <AdminLayout>
@@ -106,21 +123,21 @@ export default function Dashboard() {
               </button>
             </div>
             <div className={styles.salesList}>
-              {recentSales.map(v => {
-                const c = MOCK_CLIENTES.find(c=>c.cedula===v.cedulaCliente)
-                return (
-                  <div key={v.codigoVenta} className={styles.saleRow}>
-                    <div className={styles.saleAvatar}>
-                      {(c?.nombre||'?').split(' ').slice(0,2).map(w=>w[0]).join('')}
-                    </div>
-                    <div className={styles.saleInfo}>
-                      <span className={styles.saleName}>{c?.nombre||'Cliente'}</span>
-                      <span className={styles.saleDate}>#{v.codigoVenta} · {fmtDate(v.fecha)}</span>
-                    </div>
-                    <span className={styles.saleAmount}>{fmtCurrency(v.totalConIva)}</span>
+              {recentSales.length === 0 && (
+                <p style={{textAlign:'center',color:'var(--c-text-muted)',padding:'1rem'}}>Sin ventas recientes</p>
+              )}
+              {recentSales.map(v => (
+                <div key={v.codigoVenta} className={styles.saleRow}>
+                  <div className={styles.saleAvatar}>
+                    {(v.nombreCliente||'?').split(' ').slice(0,2).map(w=>w[0]).join('')}
                   </div>
-                )
-              })}
+                  <div className={styles.saleInfo}>
+                    <span className={styles.saleName}>{v.nombreCliente}</span>
+                    <span className={styles.saleDate}>#{v.codigoVenta} · {fmtDate((v.fecha||'').split('T')[0])}</span>
+                  </div>
+                  <span className={styles.saleAmount}>{fmtCurrency(v.totalConIva)}</span>
+                </div>
+              ))}
             </div>
           </div>
 

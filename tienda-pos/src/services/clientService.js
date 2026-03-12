@@ -1,16 +1,19 @@
 // ============================================================
 // clientService.js
-// Simula las llamadas a la API de clientes
-// En producción: reemplazar fetch mock por axios/fetch real
-// API real: GET /clientes/listar, POST /clientes/agregar
+// Llamadas a la API de clientes a través del API Gateway
+// API: GET /api/customers/:id, POST /api/customers/save
 // ============================================================
 
-import { MOCK_CLIENTES } from './mockData.js'
-
-const delay = (ms = 600) => new Promise(res => setTimeout(res, ms))
-
-// Estado mutable del mock (permite agregar clientes en la sesión)
-let clientesDB = [...MOCK_CLIENTES]
+/**
+ * Construye headers con Authorization Bearer
+ * @returns {object}
+ */
+function authHeaders() {
+  const token = localStorage.getItem('token')
+  const headers = { 'Content-Type': 'application/json' }
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  return headers
+}
 
 /**
  * Busca un cliente por cédula
@@ -18,23 +21,53 @@ let clientesDB = [...MOCK_CLIENTES]
  * @returns {Promise<{ok: boolean, cliente: object|null, message: string}>}
  */
 export async function buscarClientePorCedula(cedula) {
-  await delay(700)
-
   const cedulaNorm = String(cedula).trim()
   if (!cedulaNorm) {
     return { ok: false, cliente: null, message: 'Ingrese una cédula válida.' }
   }
 
-  const cliente = clientesDB.find(c => c.cedula === cedulaNorm)
+  try {
+    const res = await fetch(`/api/customers/${cedulaNorm}`, {
+      headers: authHeaders(),
+    })
 
-  if (cliente) {
-    return { ok: true, cliente, message: 'Cliente encontrado.' }
-  }
+    // 404 significa que el cliente no existe
+    if (res.status === 404) {
+      return {
+        ok: false,
+        cliente: null,
+        message: 'No existe un cliente registrado con esta cédula.',
+      }
+    }
 
-  return {
-    ok: false,
-    cliente: null,
-    message: 'No existe un cliente registrado con esta cédula.',
+    const body = await res.json()
+
+    if (!body.success) {
+      return {
+        ok: false,
+        cliente: null,
+        message: body.error || 'No existe un cliente registrado con esta cédula.',
+      }
+    }
+
+    const c = body.data
+    return {
+      ok: true,
+      cliente: {
+        cedula:    c.document_id,
+        nombre:    c.full_name,
+        direccion: c.address,
+        telefono:  c.phone,
+        correo:    c.email,
+      },
+      message: 'Cliente encontrado.',
+    }
+  } catch (err) {
+    return {
+      ok: false,
+      cliente: null,
+      message: 'Error de conexión con el servidor.',
+    }
   }
 }
 
@@ -44,8 +77,6 @@ export async function buscarClientePorCedula(cedula) {
  * @returns {Promise<{ok: boolean, cliente: object|null, message: string}>}
  */
 export async function registrarCliente(data) {
-  await delay(900)
-
   const { cedula, nombre, direccion, telefono, correo } = data
 
   // Validaciones básicas (SP2-QA-1, SP2-QA-2 del documento)
@@ -53,22 +84,44 @@ export async function registrarCliente(data) {
     return { ok: false, cliente: null, message: 'Faltan datos del cliente.' }
   }
 
-  // Verificar si ya existe (SP2-QA-3)
-  const existe = clientesDB.find(c => c.cedula === String(cedula).trim())
-  if (existe) {
-    return { ok: false, cliente: null, message: 'Ya existe un cliente con esta cédula.' }
+  try {
+    const res = await fetch('/api/customers/save', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({
+        document_id: String(cedula).trim(),
+        full_name:   String(nombre).trim(),
+        address:     String(direccion).trim(),
+        phone:       String(telefono).trim(),
+        email:       String(correo).trim(),
+      }),
+    })
+
+    const body = await res.json()
+
+    if (!body.success) {
+      return {
+        ok: false,
+        cliente: null,
+        message: body.error || 'No se pudo registrar el cliente.',
+      }
+    }
+
+    const c = body.data
+    const nuevoCliente = {
+      cedula:    c.document_id,
+      nombre:    c.full_name,
+      direccion: c.address,
+      telefono:  c.phone,
+      correo:    c.email,
+    }
+
+    return { ok: true, cliente: nuevoCliente, message: 'Cliente registrado exitosamente.' }
+  } catch (err) {
+    return {
+      ok: false,
+      cliente: null,
+      message: 'Error de conexión con el servidor.',
+    }
   }
-
-  const nuevoCliente = {
-    cedula: String(cedula).trim(),
-    nombre: String(nombre).trim(),
-    direccion: String(direccion).trim(),
-    telefono: String(telefono).trim(),
-    correo: String(correo).trim(),
-  }
-
-  // Guardar en mock DB
-  clientesDB.push(nuevoCliente)
-
-  return { ok: true, cliente: nuevoCliente, message: 'Cliente registrado exitosamente.' }
 }

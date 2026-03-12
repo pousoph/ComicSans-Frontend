@@ -1,200 +1,514 @@
 // ============================================================
-// adminService.js — Simula todas las APIs del administrador
+// adminService.js — Calls real backend API via gateway proxy
 // ============================================================
-import {
-  MOCK_USUARIOS, MOCK_CLIENTES, MOCK_PROVEEDORES,
-  MOCK_PRODUCTOS, MOCK_VENTAS, MOCK_ADMINS,
-  MOCK_PROVEEDORES as PROVEEDORES_DB,
-  nextUsuarioId, nextClienteId, nextProvId,
-} from './mockData.js'
 
-const delay = (ms = 600) => new Promise(r => setTimeout(r, ms))
+const API = '/api'
+
+function authHeaders() {
+  const token = localStorage.getItem('token')
+  const headers = { 'Content-Type': 'application/json' }
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  return headers
+}
+
+async function request(url, options = {}) {
+  const res = await fetch(url, options)
+  if (res.status === 204) return null
+  const body = await res.json().catch(() => null)
+  if (!res.ok) {
+    const msg = body?.message || body?.error || `Error ${res.status}`
+    throw new Error(msg)
+  }
+  return body
+}
+
+// ── Mappers: backend (English) → frontend (Spanish) ─────────
+
+function mapUserFromBackend(u, index) {
+  return {
+    id: u.cedula,
+    cedula: u.cedula,
+    nombre: u.full_name,
+    correo: u.email,
+    usuario: u.username,
+    rol: 'CAJERO',
+    estado: u.is_active ?? true,
+    fechaCreacion: u.created_at ? u.created_at.split('T')[0] : new Date().toISOString().split('T')[0],
+  }
+}
+
+function mapUserToBackend(data) {
+  const payload = {}
+  if (data.cedula !== undefined) payload.cedula = data.cedula
+  if (data.nombre !== undefined) payload.full_name = data.nombre
+  if (data.correo !== undefined) payload.email = data.correo
+  if (data.usuario !== undefined) payload.username = data.usuario
+  if (data.password !== undefined) payload.password = data.password
+  return payload
+}
+
+function mapCustomerFromBackend(c) {
+  return {
+    id: c.document_id,
+    cedula: c.document_id,
+    nombre: c.full_name,
+    direccion: c.address,
+    telefono: c.phone,
+    correo: c.email,
+    estado: true,
+    fechaRegistro: c.created_at ? c.created_at.split('T')[0] : new Date().toISOString().split('T')[0],
+  }
+}
+
+function mapCustomerToBackend(data) {
+  const payload = {}
+  if (data.cedula !== undefined) payload.document_id = data.cedula
+  if (data.nombre !== undefined) payload.full_name = data.nombre
+  if (data.direccion !== undefined) payload.address = data.direccion
+  if (data.telefono !== undefined) payload.phone = data.telefono
+  if (data.correo !== undefined) payload.email = data.correo
+  return payload
+}
+
+function mapSupplierFromBackend(s) {
+  return {
+    id: s.nit,
+    nit: s.nit,
+    nombre: s.supplier_name,
+    direccion: s.address,
+    telefono: s.phone,
+    ciudad: s.city,
+  }
+}
+
+function mapSupplierToBackend(data) {
+  const payload = {}
+  if (data.nit !== undefined) payload.nit = data.nit
+  if (data.nombre !== undefined) payload.supplier_name = data.nombre
+  if (data.direccion !== undefined) payload.address = data.direccion
+  if (data.telefono !== undefined) payload.phone = data.telefono
+  if (data.ciudad !== undefined) payload.city = data.ciudad
+  return payload
+}
 
 // ── AUTH ──────────────────────────────────────────────────────
 export async function adminLogin(usuario, password) {
-  await delay(900)
-  const u = [...MOCK_ADMINS, ...MOCK_USUARIOS.filter(u => u.rol === 'ADMIN')]
-    .find(u => u.usuario === usuario && u.password === password)
-  if (u) return { ok: true,  user: { cedula: u.cedula, nombre: u.nombre, usuario: u.usuario, rol: u.rol } }
-  return     { ok: false, message: 'Usuario o contraseña incorrectos.' }
+  try {
+    const body = await request(`${API}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: usuario, password }),
+    })
+    const token = body?.data?.token
+    if (token) {
+      localStorage.setItem('token', token)
+      // Decode JWT payload to extract user info
+      let userInfo = {}
+      try {
+        const payloadB64 = token.split('.')[1]
+        userInfo = JSON.parse(atob(payloadB64))
+      } catch (_) { /* ignore decode errors */ }
+
+      return {
+        ok: true,
+        user: {
+          cedula: userInfo.cedula || userInfo.sub || '',
+          nombre: userInfo.full_name || userInfo.nombre || usuario,
+          usuario: userInfo.username || usuario,
+          rol: userInfo.rol || 'ADMIN',
+        },
+      }
+    }
+    return { ok: false, message: 'No se recibió token.' }
+  } catch (err) {
+    return { ok: false, message: err.message || 'Usuario o contraseña incorrectos.' }
+  }
 }
 
 // ── USUARIOS ──────────────────────────────────────────────────
 export async function getUsuarios() {
-  await delay(500)
-  return { ok: true, data: [...MOCK_USUARIOS] }
+  try {
+    const data = await request(`${API}/users/list`, {
+      headers: authHeaders(),
+    })
+    const list = Array.isArray(data) ? data : (data?.data || [])
+    return { ok: true, data: list.map(mapUserFromBackend) }
+  } catch (err) {
+    return { ok: false, data: [], message: err.message }
+  }
 }
+
 export async function createUsuario(data) {
-  await delay(800)
-  if (!data.cedula||!data.nombre||!data.correo||!data.usuario||!data.password)
-    return { ok:false, message:'Faltan datos del usuario.' }
-  if (MOCK_USUARIOS.find(u => u.cedula === data.cedula || u.usuario === data.usuario))
-    return { ok:false, message:'Cédula o usuario ya existe.' }
-  const nuevo = { ...data, id: nextUsuarioId(), estado: true, fechaCreacion: new Date().toISOString().split('T')[0], rol: data.rol||'CAJERO' }
-  MOCK_USUARIOS.push(nuevo)
-  return { ok:true, data: nuevo, message:'Usuario creado.' }
+  try {
+    if (!data.cedula || !data.nombre || !data.correo || !data.usuario || !data.password)
+      return { ok: false, message: 'Faltan datos del usuario.' }
+
+    const payload = mapUserToBackend(data)
+    const res = await request(`${API}/users/save`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    })
+    const mapped = res ? mapUserFromBackend(res.data || res) : { ...data, id: data.cedula, estado: true, rol: 'CAJERO', fechaCreacion: new Date().toISOString().split('T')[0] }
+    return { ok: true, data: mapped, message: 'Usuario creado.' }
+  } catch (err) {
+    return { ok: false, message: err.message }
+  }
 }
+
 export async function updateUsuario(id, data) {
-  await delay(700)
-  const idx = MOCK_USUARIOS.findIndex(u => u.id === id)
-  if (idx === -1) return { ok:false, message:'Usuario no encontrado.' }
-  MOCK_USUARIOS[idx] = { ...MOCK_USUARIOS[idx], ...data }
-  return { ok:true, data: MOCK_USUARIOS[idx], message:'Usuario actualizado.' }
+  try {
+    const payload = mapUserToBackend(data)
+    payload.cedula = id
+    const res = await request(`${API}/users/update`, {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    })
+    const mapped = res ? mapUserFromBackend(res.data || res) : { ...data, id, cedula: id }
+    return { ok: true, data: mapped, message: 'Usuario actualizado.' }
+  } catch (err) {
+    return { ok: false, message: err.message }
+  }
 }
+
 export async function deleteUsuario(id) {
-  await delay(600)
-  const idx = MOCK_USUARIOS.findIndex(u => u.id === id)
-  if (idx === -1) return { ok:false, message:'Usuario no encontrado.' }
-  MOCK_USUARIOS.splice(idx, 1)
-  return { ok:true, message:'Usuario eliminado.' }
+  try {
+    await request(`${API}/users/delete/${id}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    })
+    return { ok: true, message: 'Usuario eliminado.' }
+  } catch (err) {
+    return { ok: false, message: err.message }
+  }
 }
+
 export async function toggleUsuarioEstado(id) {
-  await delay(500)
-  const u = MOCK_USUARIOS.find(u => u.id === id)
-  if (!u) return { ok:false, message:'No encontrado.' }
-  u.estado = !u.estado
-  return { ok:true, data: u }
+  return { ok: false, message: 'Función no disponible' }
 }
 
 // ── CLIENTES ──────────────────────────────────────────────────
 export async function getClientes() {
-  await delay(500)
-  return { ok:true, data: [...MOCK_CLIENTES] }
+  try {
+    const data = await request(`${API}/customers/list`, {
+      headers: authHeaders(),
+    })
+    const list = Array.isArray(data) ? data : (data?.data || [])
+    return { ok: true, data: list.map(mapCustomerFromBackend) }
+  } catch (err) {
+    return { ok: false, data: [], message: err.message }
+  }
 }
+
 export async function createCliente(data) {
-  await delay(800)
-  if (!data.cedula||!data.nombre||!data.direccion||!data.telefono)
-    return { ok:false, message:'Faltan datos del cliente.' }
-  if (MOCK_CLIENTES.find(c => c.cedula === data.cedula))
-    return { ok:false, message:'Ya existe un cliente con esta cédula.' }
-  const nuevo = { ...data, id: nextClienteId(), estado: true, fechaRegistro: new Date().toISOString().split('T')[0] }
-  MOCK_CLIENTES.push(nuevo)
-  return { ok:true, data: nuevo, message:'Cliente creado.' }
+  try {
+    if (!data.cedula || !data.nombre || !data.direccion || !data.telefono)
+      return { ok: false, message: 'Faltan datos del cliente.' }
+
+    const payload = mapCustomerToBackend(data)
+    const res = await request(`${API}/customers/save`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    })
+    const mapped = res ? mapCustomerFromBackend(res.data || res) : { ...data, id: data.cedula, estado: true, fechaRegistro: new Date().toISOString().split('T')[0] }
+    return { ok: true, data: mapped, message: 'Cliente creado.' }
+  } catch (err) {
+    return { ok: false, message: err.message }
+  }
 }
+
 export async function updateCliente(id, data) {
-  await delay(700)
-  const idx = MOCK_CLIENTES.findIndex(c => c.id === id)
-  if (idx === -1) return { ok:false, message:'Cliente no encontrado.' }
-  MOCK_CLIENTES[idx] = { ...MOCK_CLIENTES[idx], ...data }
-  return { ok:true, data: MOCK_CLIENTES[idx], message:'Cliente actualizado.' }
+  try {
+    const payload = mapCustomerToBackend(data)
+    payload.document_id = id
+    const res = await request(`${API}/customers/update`, {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    })
+    const mapped = res ? mapCustomerFromBackend(res.data || res) : { ...data, id, cedula: id }
+    return { ok: true, data: mapped, message: 'Cliente actualizado.' }
+  } catch (err) {
+    return { ok: false, message: err.message }
+  }
 }
+
 export async function deleteCliente(id) {
-  await delay(600)
-  const idx = MOCK_CLIENTES.findIndex(c => c.id === id)
-  if (idx === -1) return { ok:false, message:'No encontrado.' }
-  MOCK_CLIENTES.splice(idx, 1)
-  return { ok:true, message:'Cliente eliminado.' }
+  try {
+    await request(`${API}/customers/delete/${id}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    })
+    return { ok: true, message: 'Cliente eliminado.' }
+  } catch (err) {
+    return { ok: false, message: err.message }
+  }
 }
 
 // ── PROVEEDORES ──────────────────────────────────────────────
 export async function getProveedores() {
-  await delay(500)
-  return { ok:true, data: [...MOCK_PROVEEDORES] }
+  try {
+    const data = await request(`${API}/catalog/suppliers/list`, {
+      headers: authHeaders(),
+    })
+    const list = Array.isArray(data) ? data : (data?.data || [])
+    return { ok: true, data: list.map(mapSupplierFromBackend) }
+  } catch (err) {
+    return { ok: false, data: [], message: err.message }
+  }
 }
+
 export async function createProveedor(data) {
-  await delay(800)
-  if (!data.nit||!data.nombre||!data.direccion||!data.telefono||!data.ciudad)
-    return { ok:false, message:'Faltan datos del proveedor.' }
-  if (MOCK_PROVEEDORES.find(p => p.nit === data.nit))
-    return { ok:false, message:'Ya existe un proveedor con este NIT.' }
-  const nuevo = { ...data, id: nextProvId() }
-  MOCK_PROVEEDORES.push(nuevo)
-  return { ok:true, data: nuevo, message:'Proveedor creado.' }
+  try {
+    if (!data.nit || !data.nombre || !data.direccion || !data.telefono || !data.ciudad)
+      return { ok: false, message: 'Faltan datos del proveedor.' }
+
+    const payload = mapSupplierToBackend(data)
+    const res = await request(`${API}/catalog/suppliers/save`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    })
+    const mapped = res ? mapSupplierFromBackend(res.data || res) : { ...data, id: data.nit }
+    return { ok: true, data: mapped, message: 'Proveedor creado.' }
+  } catch (err) {
+    return { ok: false, message: err.message }
+  }
 }
+
 export async function updateProveedor(id, data) {
-  await delay(700)
-  const idx = MOCK_PROVEEDORES.findIndex(p => p.id === id)
-  if (idx === -1) return { ok:false, message:'No encontrado.' }
-  MOCK_PROVEEDORES[idx] = { ...MOCK_PROVEEDORES[idx], ...data }
-  return { ok:true, data: MOCK_PROVEEDORES[idx], message:'Proveedor actualizado.' }
+  try {
+    const payload = mapSupplierToBackend(data)
+    payload.nit = id
+    const res = await request(`${API}/catalog/suppliers/update`, {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    })
+    const mapped = res ? mapSupplierFromBackend(res.data || res) : { ...data, id, nit: id }
+    return { ok: true, data: mapped, message: 'Proveedor actualizado.' }
+  } catch (err) {
+    return { ok: false, message: err.message }
+  }
 }
+
 export async function deleteProveedor(id) {
-  await delay(600)
-  const idx = MOCK_PROVEEDORES.findIndex(p => p.id === id)
-  if (idx === -1) return { ok:false, message:'No encontrado.' }
-  MOCK_PROVEEDORES.splice(idx, 1)
-  return { ok:true, message:'Proveedor eliminado.' }
+  try {
+    await request(`${API}/catalog/suppliers/delete/${id}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    })
+    return { ok: true, message: 'Proveedor eliminado.' }
+  } catch (err) {
+    return { ok: false, message: err.message }
+  }
 }
 
 // ── PRODUCTOS (CSV) ──────────────────────────────────────────
 export async function cargarProductosCSV(file) {
-  await delay(1400)
-  return new Promise((resolve) => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const text = e.target.result
-      const lines = text.trim().split('\n').filter(Boolean)
-      const errores = []
-      const productos = []
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
 
-      lines.forEach((line, i) => {
-        const parts = line.split(',').map(s => s.trim())
-        if (parts.length < 6) { errores.push(`Fila ${i+1}: formato inválido.`); return }
-        const [codigo, nombre, nitProveedor, precioCompra, ivaCompra, precioVenta] = parts
-        if (!codigo||!nombre) { errores.push(`Fila ${i+1}: código o nombre vacío.`); return }
-        const proveedor = MOCK_PROVEEDORES.find(p => p.nit === nitProveedor)
-        if (!proveedor) { errores.push(`Fila ${i+1}: NIT proveedor '${nitProveedor}' no existe.`); return }
-        productos.push({ codigo, nombre, nitProveedor, precioCompra: +precioCompra, ivaCompra: +ivaCompra, precioVenta: +precioVenta })
-      })
+    const token = localStorage.getItem('token')
+    const headers = {}
+    if (token) headers['Authorization'] = `Bearer ${token}`
+    // Do NOT set Content-Type — browser sets it with boundary for multipart
 
-      if (errores.length > 0) {
-        resolve({ ok: false, errores, message: `${errores.length} errores encontrados.` })
-        return
-      }
+    const res = await fetch(`${API}/catalog/products/upload`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    })
 
-      // Reemplazar todos los productos (según el documento)
-      MOCK_PRODUCTOS.length = 0
-      MOCK_PRODUCTOS.push(...productos)
-      resolve({ ok: true, data: productos, message: `${productos.length} productos cargados exitosamente.` })
+    const body = await res.json().catch(() => null)
+
+    if (!res.ok) {
+      const msg = body?.message || body?.error || `Error ${res.status}`
+      return { ok: false, message: msg }
     }
-    reader.onerror = () => resolve({ ok: false, message: 'Error leyendo el archivo.' })
-    reader.readAsText(file)
-  })
+
+    const result = body?.data || body || {}
+    const inserted = result.inserted || 0
+    const updated = result.updated || 0
+    const rejected = result.rejected || 0
+    const rejectedRows = result.rejected_rows || []
+
+    if (rejected > 0) {
+      const errores = rejectedRows.map(r => typeof r === 'string' ? r : `Fila rechazada: ${JSON.stringify(r)}`)
+      return { ok: false, errores, message: `${rejected} errores encontrados.` }
+    }
+
+    return {
+      ok: true,
+      data: { inserted, updated },
+      message: `${inserted + updated} productos procesados exitosamente (${inserted} nuevos, ${updated} actualizados).`,
+    }
+  } catch (err) {
+    return { ok: false, message: err.message || 'Error subiendo el archivo.' }
+  }
+}
+
+// ── PRODUCTOS (LIST) ─────────────────────────────────────────
+export async function getProductos() {
+  try {
+    const data = await request(`${API}/catalog/products/list`, {
+      headers: authHeaders(),
+    })
+    const list = Array.isArray(data) ? data : (data?.data || [])
+    return {
+      ok: true,
+      data: list.map(p => ({
+        codigo: p.product_code,
+        nombre: p.product_name,
+        nitProveedor: p.nit_supplier,
+        precioCompra: p.purchase_price,
+        ivaCompra: p.purchase_vat,
+        precioVenta: p.sale_price,
+      })),
+    }
+  } catch (err) {
+    return { ok: false, data: [], message: err.message }
+  }
 }
 
 // ── REPORTES ──────────────────────────────────────────────────
 export async function getReporteUsuarios() {
-  await delay(600)
-  return { ok:true, data: [...MOCK_USUARIOS] }
+  try {
+    const data = await request(`${API}/users/list`, {
+      headers: authHeaders(),
+    })
+    const list = Array.isArray(data) ? data : (data?.data || [])
+    return { ok: true, data: list.map(mapUserFromBackend) }
+  } catch (err) {
+    return { ok: false, data: [], message: err.message }
+  }
 }
+
 export async function getReporteClientes() {
-  await delay(600)
-  return { ok:true, data: [...MOCK_CLIENTES] }
+  try {
+    const data = await request(`${API}/customers/list`, {
+      headers: authHeaders(),
+    })
+    const list = Array.isArray(data) ? data : (data?.data || [])
+    return { ok: true, data: list.map(mapCustomerFromBackend) }
+  } catch (err) {
+    return { ok: false, data: [], message: err.message }
+  }
 }
+
 export async function getReporteVentasPorCliente() {
-  await delay(700)
-  const mapa = {}
-  MOCK_VENTAS.forEach(v => {
-    const cliente = MOCK_CLIENTES.find(c => c.cedula === v.cedulaCliente)
-    if (!mapa[v.cedulaCliente]) {
-      mapa[v.cedulaCliente] = {
-        cedula: v.cedulaCliente,
-        nombre: cliente?.nombre || 'Desconocido',
-        totalVentas: 0, cantidadVentas: 0
-      }
-    }
-    mapa[v.cedulaCliente].totalVentas    += v.totalConIva
-    mapa[v.cedulaCliente].cantidadVentas += 1
-  })
-  const rows = Object.values(mapa)
-  const granTotal = rows.reduce((a,r) => a + r.totalVentas, 0)
-  return { ok:true, data: rows, granTotal }
+  try {
+    const [salesRes, customersRes] = await Promise.all([
+      request(`${API}/reports/sales-by-customer`, { headers: authHeaders() }),
+      request(`${API}/customers/list`, { headers: authHeaders() }),
+    ])
+
+    const salesList = Array.isArray(salesRes) ? salesRes : (salesRes?.data || [])
+    const customersList = Array.isArray(customersRes) ? customersRes : (customersRes?.data || [])
+
+    // Build a lookup map for customer names
+    const customerMap = {}
+    customersList.forEach(c => {
+      customerMap[c.document_id] = c.full_name
+    })
+
+    const rows = salesList.map(s => ({
+      cedula: s.customer_id,
+      nombre: customerMap[s.customer_id] || 'Desconocido',
+      totalVentas: s.total_purchases || 0,
+      cantidadVentas: s.sale_count || 0,
+    }))
+
+    const granTotal = rows.reduce((acc, r) => acc + r.totalVentas, 0)
+
+    return { ok: true, data: rows, granTotal }
+  } catch (err) {
+    return { ok: false, data: [], granTotal: 0, message: err.message }
+  }
+}
+
+// ── VENTAS RECIENTES (for dashboard) ─────────────────────────
+export async function getVentasRecientes() {
+  try {
+    const [salesRes, customersRes] = await Promise.all([
+      request(`${API}/sales/list`, { headers: authHeaders() }),
+      request(`${API}/customers/list`, { headers: authHeaders() }),
+    ])
+
+    const salesList = Array.isArray(salesRes) ? salesRes : (salesRes?.data || [])
+    const customersList = Array.isArray(customersRes) ? customersRes : (customersRes?.data || [])
+
+    const customerMap = {}
+    customersList.forEach(c => {
+      customerMap[c.document_id] = c.full_name
+    })
+
+    const sales = salesList.map(s => ({
+      codigoVenta: s.sale_code || s.id || '',
+      cedulaCliente: s.customer_id || s.document_id || '',
+      nombreCliente: customerMap[s.customer_id || s.document_id] || 'Cliente',
+      totalConIva: s.total_with_vat || 0,
+      fecha: s.created_at || '',
+    }))
+
+    // Sort by date descending
+    sales.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''))
+
+    return { ok: true, data: sales }
+  } catch (err) {
+    return { ok: false, data: [], message: err.message }
+  }
 }
 
 // ── DASHBOARD STATS ───────────────────────────────────────────
 export async function getDashboardStats() {
-  await delay(500)
-  return {
-    ok: true,
-    data: {
-      totalUsuarios:    MOCK_USUARIOS.length,
-      usuariosActivos:  MOCK_USUARIOS.filter(u=>u.estado).length,
-      totalClientes:    MOCK_CLIENTES.length,
-      clientesActivos:  MOCK_CLIENTES.filter(c=>c.estado).length,
-      totalProveedores: MOCK_PROVEEDORES.length,
-      totalProductos:   MOCK_PRODUCTOS.length,
-      totalVentas:      MOCK_VENTAS.length,
-      ingresosTotales:  MOCK_VENTAS.reduce((a,v)=>a+v.totalConIva,0),
+  try {
+    const [usersRes, customersRes, suppliersRes, salesRes, productsRes] = await Promise.allSettled([
+      request(`${API}/users/list`, { headers: authHeaders() }),
+      request(`${API}/customers/list`, { headers: authHeaders() }),
+      request(`${API}/catalog/suppliers/list`, { headers: authHeaders() }),
+      request(`${API}/reports/sales-by-customer`, { headers: authHeaders() }),
+      request(`${API}/catalog/products/list`, { headers: authHeaders() }),
+    ])
+
+    const extract = (res) => res.status === 'fulfilled'
+      ? (Array.isArray(res.value) ? res.value : (res.value?.data || []))
+      : []
+    const users = extract(usersRes)
+    const customers = extract(customersRes)
+    const suppliers = extract(suppliersRes)
+    const sales = extract(salesRes)
+    const products = extract(productsRes)
+
+    const totalVentas = sales.reduce((acc, s) => acc + (s.sale_count || 0), 0)
+    const ingresosTotales = sales.reduce((acc, s) => acc + (s.total_purchases || 0), 0)
+
+    return {
+      ok: true,
+      data: {
+        totalUsuarios: users.length,
+        usuariosActivos: users.filter(u => u.is_active).length,
+        totalClientes: customers.length,
+        clientesActivos: customers.length,
+        totalProveedores: suppliers.length,
+        totalProductos: products.length,
+        totalVentas,
+        ingresosTotales,
+      },
+    }
+  } catch (err) {
+    return {
+      ok: false,
+      data: {
+        totalUsuarios: 0, usuariosActivos: 0,
+        totalClientes: 0, clientesActivos: 0,
+        totalProveedores: 0, totalProductos: 0,
+        totalVentas: 0, ingresosTotales: 0,
+      },
+      message: err.message,
     }
   }
 }
