@@ -1,0 +1,37 @@
+services:
+  tienda-pos:
+    build: ./tienda-pos
+    restart: unless-stopped
+    networks:
+      - tienda-net
+    deploy:
+      replicas: 2
+
+  tienda-admin:
+    build: ./tienda-admin
+    restart: unless-stopped
+    networks:
+      - tienda-net
+    deploy:
+      replicas: 2
+
+  edge:
+    image: nginx:1.27-alpine
+    container_name: tienda-edge
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - tienda-net
+    depends_on:
+      - tienda-pos
+      - tienda-admin
+
+networks:
+  # Red compartida con el backend (comic-sans-backend/docker-compose.yml).
+  # Levantar el backend primero crea la red; aquí la importamos como externa.
+  tienda-net:
+    external: true
+    name: comic-sans-backend_tienda-net
